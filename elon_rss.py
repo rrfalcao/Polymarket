@@ -5,6 +5,7 @@ from feedgen.feed import FeedGenerator
 from flask import Flask, Response
 from datetime import datetime
 from flask import jsonify
+import pytz
 app = Flask(__name__)
 
 # List of fallback Nitter instances (ordered by reliability)
@@ -66,7 +67,8 @@ def generate_rss():
             cleaned_time = raw_time.replace("·", "").strip()
 
             try:
-                dt_obj = datetime.strptime(cleaned_time, "%b %d, %Y %I:%M %p %Z")
+                dt_obj = pytz.utc.localize(datetime.strptime(cleaned_time, "%b %d, %Y %I:%M %p %Z"))
+
             except ValueError:
                 dt_obj = datetime.utcnow()  # fallback to now
 
