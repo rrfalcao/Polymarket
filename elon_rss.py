@@ -4,10 +4,12 @@ from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
 from flask import Flask, Response
 from datetime import datetime
+from flask import jsonify
 app = Flask(__name__)
 
 # List of fallback Nitter instances (ordered by reliability)
 NITTER_INSTANCES = [
+    "https://nitter.net",
     "https://nitter.poast.org",
     "https://nitter.tiekoetter.com",
     "https://nitter.kavin.rocks",
@@ -79,6 +81,42 @@ def generate_rss():
 
     except Exception as e:
         return f"<h1>Internal Server Error</h1><p>{str(e)}</p>", 500
+@app.route("/json")
+def get_tweets_json():
+    try:
+        html = fetch_nitter_html("elonmusk")
+        soup = BeautifulSoup(html, 'html.parser')
+        tweets = soup.find_all('div', class_='timeline-item')[:10]
+
+        output = []
+        for tweet in tweets:
+            content_div = tweet.find('div', class_='tweet-content')
+            date_link = tweet.find('span', class_='tweet-date').find('a')
+
+            if not content_div or not date_link:
+                continue
+
+            text = content_div.text.strip()
+            link = 'https://twitter.com' + date_link['href']
+            raw_time = date_link['title']
+            cleaned_time = raw_time.replace("·", "").strip()
+
+            try:
+                dt_obj = datetime.strptime(cleaned_time, "%b %d, %Y %I:%M %p %Z")
+                iso_time = dt_obj.isoformat() + "Z"
+            except ValueError:
+                iso_time = datetime.utcnow().isoformat() + "Z"
+
+            output.append({
+                "text": text,
+                "link": link,
+                "timestamp": iso_time
+            })
+
+        return jsonify(output)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
