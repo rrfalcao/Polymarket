@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
 from flask import Flask, Response
-
+import os
 app = Flask(__name__)
 
 NITTER_URL = 'https://nitter.net/elonmusk'
@@ -33,5 +33,7 @@ def generate_rss():
     rssfeed = fg.rss_str(pretty=True)
     return Response(rssfeed, mimetype='application/rss+xml')
 
+
 if __name__ == '__main__':
-    app.run(port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
