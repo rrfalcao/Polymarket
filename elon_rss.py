@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
 from flask import Flask, Response
-
+from datetime import datetime
 app = Flask(__name__)
 
 # List of fallback Nitter instances (ordered by reliability)
@@ -56,15 +56,24 @@ def generate_rss():
             if not content_div or not date_link:
                 continue
 
+                       
+
             content = content_div.text.strip()
             link = 'https://twitter.com' + date_link['href']
-            time = date_link['title']
+            raw_time = date_link['title']
+            cleaned_time = raw_time.replace("·", "").strip()
+
+            try:
+                dt_obj = datetime.strptime(cleaned_time, "%b %d, %Y %I:%M %p %Z")
+            except ValueError:
+                dt_obj = datetime.utcnow()  # fallback to now
 
             fe = fg.add_entry()
             fe.title(content[:60] + '...')
             fe.link(href=link)
             fe.description(content)
-            fe.pubDate(time)
+            fe.pubDate(dt_obj)
+
 
         return Response(fg.rss_str(pretty=True), mimetype='application/rss+xml')
 
